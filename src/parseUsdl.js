@@ -2,7 +2,11 @@ const CodeToKey = require("./keys").CodeToKey;
 
 const lineSeparator = "\n";
 
-const defaultOptions = {suppressErrors: false};
+const defaultOptions = { suppressErrors: false };
+
+const parseANSI = (ansiLine) => {
+
+};
 
 exports.parse = function parseCode128(str, options = defaultOptions) {
   const props = {};
@@ -10,12 +14,17 @@ exports.parse = function parseCode128(str, options = defaultOptions) {
   const lines = rawLines.map(rawLine => sanitizeData(rawLine));
   let started;
   lines.slice(0, -1).forEach(line => {
-    if (!started) {
-      if (line.indexOf("ANSI ") === 0) {
-        started = true;
+      if (!started) {
+          if (line.indexOf("ANSI ") === 0) {
+              started = true;
+          }
+
+          // parse ansi data and add to props
+          let ansiData = parseANSI(line);
+          props = { ...props, ...ansiData };
+
+          return;
       }
-      return;
-    }
 
     let code = getCode(line);
     let value = getValue(line);
