@@ -3,46 +3,63 @@ const CodeToKey = require("./keys").CodeToKey;
 const lineSeparator = "\n";
 
 const defaultOptions = { suppressErrors: false };
+const patterns = require('./ansipatterns');
 
 const parseANSI = (ansiLine) => {
+
+    var match = null;
+    for (var i = 0; i < patterns.length; i++) {
+
+        match = patterns[i].match(ansiLine);
+
+        if (match) {
+            break;
+        }// if
+    }// for
+
+    return match;
 
 };
 
 exports.parse = function parseCode128(str, options = defaultOptions) {
-  const props = {};
-  const rawLines = str.trim().split(lineSeparator);
-  const lines = rawLines.map(rawLine => sanitizeData(rawLine));
-  let started;
-  lines.slice(0, -1).forEach(line => {
-      if (!started) {
-          if (line.indexOf("ANSI ") === 0) {
-              started = true;
-          }
+    var props = {};
+    const rawLines = str.trim().split(lineSeparator);
+    const lines = rawLines.map(rawLine => sanitizeData(rawLine));
+    let started;
+    lines.slice(0, -1).forEach(line => {
+        if (!started) {
+            if (line.indexOf("ANSI ") === 0) {
+                started = true;
+            }
 
-          // parse ansi data and add to props
-          let ansiData = parseANSI(line);
-          props = { ...props, ...ansiData };
+            // parse ansi data and add to props
+            let ansiData = parseANSI(line);
 
-          return;
-      }
+            if (ansiData) {
 
-    let code = getCode(line);
-    let value = getValue(line);
-    let key = getKey(code);
-    if (!key) {
-      if (options.suppressErrors) {
-        return;
-      } else {
-        throw new Error("unknown code: " + code);
-      }
-    }
+                props = { ...props, ...ansiData };
+            }// if
 
-    if (isSexField(code)) value = getSex(code, value);
+            return;
+        }
 
-    props[key] = isDateField(key) ? getDateFormat(value) : value;
-  });
+        let code = getCode(line);
+        let value = getValue(line);
+        let key = getKey(code);
+        if (!key) {
+            if (options.suppressErrors) {
+                return;
+            } else {
+                throw new Error("unknown code: " + code);
+            }
+        }
 
-  return props;
+        if (isSexField(code)) value = getSex(code, value);
+
+        props[key] = isDateField(key) ? getDateFormat(value) : value;
+    });
+
+    return props;
 };
 
 const sanitizeData = rawLine => rawLine.match(/[\011\012\015\040-\177]*/g).join('').trim();
@@ -58,6 +75,6 @@ const getSex = (code, value) => (value === "1" ? "M" : "F");
 const isDateField = key => key.indexOf("date") === 0;
 
 const getDateFormat = value => {
-  const parts = [value.slice(0, 2), value.slice(2, 4), value.slice(4)];
-  return parts.join("/");
+    const parts = [value.slice(0, 2), value.slice(2, 4), value.slice(4)];
+    return parts.join("/");
 };
